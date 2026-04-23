@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rubrik 4-Node Dell Cluster — Dual Network Topology</title>
+<style>
+  :root {
+    --bg: #f7f6f1;
+    --card: #ffffff;
+    --text-primary: #2c2c2a;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #888780;
+    --border: rgba(0,0,0,0.15);
+    --primary-net: #185FA5;
+    --primary-net-light: #E6F1FB;
+    --primary-net-dark: #0C447C;
+    --secondary-net: #0F6E56;
+    --secondary-net-light: #E1F5EE;
+    --secondary-net-dark: #085041;
+    --node-fill: #9FE1CB;
+    --node-stroke: #0F6E56;
+    --cloud-fill: #B5D4F4;
+    --cloud-stroke: #185FA5;
+    --gray-fill: #D3D1C7;
+    --gray-stroke: #888780;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18;
+      --card: #262624;
+      --text-primary: #f0ede4;
+      --text-secondary: #c2c0b6;
+      --text-tertiary: #9c9a92;
+      --border: rgba(255,255,255,0.15);
+      --primary-net: #85B7EB;
+      --primary-net-light: #0C447C;
+      --primary-net-dark: #B5D4F4;
+      --secondary-net: #5DCAA5;
+      --secondary-net-light: #085041;
+      --secondary-net-dark: #9FE1CB;
+      --node-fill: #0F6E56;
+      --node-stroke: #5DCAA5;
+      --cloud-fill: #185FA5;
+      --cloud-stroke: #85B7EB;
+      --gray-fill: #444441;
+      --gray-stroke: #B4B2A9;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 24px;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+  }
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+  }
+  .diagram-card {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .diagram-card svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .legend {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+  .legend h2 {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 12px 0;
+    color: var(--text-primary);
+  }
+  .legend-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .legend-swatch {
+    flex-shrink: 0;
+    width: 44px;
+    height: 16px;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .notes {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .notes h2 {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 12px 0;
+  }
+  .notes p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 10px 0;
+  }
+  .notes code {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: "SF Mono", Monaco, Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-primary);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Rubrik 4-Node Dell Cluster — Dual Network Topology</h1>
+  <div class="subtitle">Primary ports (Management + routable Data) uplink to the core switch · Secondary ports uplink to the isolated backup LAN</div>
+
+  <div class="diagram-card">
+    <svg viewBox="0 0 1000 820" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="diagramTitle diagramDesc">
+      <title id="diagramTitle">Rubrik 4-node Dell cluster dual network topology</title>
+      <desc id="diagramDesc">Four Dell nodes arranged horizontally. Each node has primary redundant ports on the top edge uplinking to a core routable switch which reaches Rubrik Security Cloud, and secondary redundant ports on the bottom edge uplinking to an isolated non-routable backup LAN shared with protected hosts.</desc>
+
+      <defs>
+        <marker id="arrow-primary" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- ============ TOP: Rubrik Security Cloud ============ -->
+      <g>
+        <rect x="340" y="20" width="320" height="60" rx="10" fill="var(--cloud-fill)" stroke="var(--cloud-stroke)" stroke-width="0.5"/>
+        <text x="500" y="44" text-anchor="middle" font-size="15" font-weight="500" fill="var(--primary-net-dark)">Rubrik Security Cloud (SaaS)</text>
+        <text x="500" y="64" text-anchor="middle" font-size="12" fill="var(--primary-net-dark)">bmc.my.rubrik.com  ·  HTTPS TCP/443</text>
+      </g>
+
+      <!-- Internet link to core switch -->
+      <line x1="500" y1="80" x2="500" y2="120" stroke="var(--primary-net)" stroke-width="1.5" marker-end="url(#arrow-primary)"/>
+      <text x="512" y="104" font-size="11" fill="var(--text-secondary)">Internet</text>
+
+      <!-- ============ CORE SWITCH (routable) ============ -->
+      <g>
+        <rect x="80" y="120" width="840" height="64" rx="10" fill="var(--primary-net-light)" stroke="var(--primary-net)" stroke-width="0.5"/>
+        <text x="500" y="144" text-anchor="middle" font-size="15" font-weight="500" fill="var(--primary-net-dark)">Core switch — routable network</text>
+        <text x="500" y="164" text-anchor="middle" font-size="12" fill="var(--primary-net-dark)">Management VLAN + Data VLAN  ·  default gateway  ·  internet egress</text>
+      </g>
+
+      <!-- Label for primary uplink band -->
+      <text x="500" y="206" text-anchor="middle" font-size="12" fill="var(--text-secondary)" font-style="italic">Primary redundant ports (2 per node)  —  top side</text>
+
+      <!-- ============ PRIMARY UPLINKS from core switch down to node tops ============ -->
+      <!-- Node 1 primary pair -->
+      <line x1="160" y1="184" x2="160" y2="270" stroke="var(--primary-net)" stroke-width="1.25"/>
+      <line x1="190" y1="184" x2="190" y2="270" stroke="var(--primary-net)" stroke-width="1.25"/>
+      <!-- Node 2 primary pair -->
+      <line x1="370" y1="184" x2="370" y2="270" stroke="var(--primary-net)" stroke-width="1.25"/>
+      <line x1="400" y1="184" x2="400" y2="270" stroke="var(--primary-net)" stroke-width="1.25"/>
+      <!-- Node 3 primary pair -->
+      <line x1="580" y1="184" x2="580" y2="270" stroke="var(--primary-net)" stroke-width="1.25"/>
+      <line x1="610" y1="184" x2="610" y2="270" stroke="var(--primary-net)" stroke-width="1.25"/>
+      <!-- Node 4 primary pair -->
+      <line x1="790" y1="184" x2="790" y2="270" stroke="var(--primary-net)" stroke-width="1.25"/>
+      <line x1="820" y1="184" x2="820" y2="270" stroke="var(--primary-net)" stroke-width="1.25"/>
+
+      <!-- ============ FOUR NODES ============ -->
+      <!-- Node 1 -->
+      <g>
+        <!-- primary port indicators on TOP -->
+        <circle cx="160" cy="272" r="5" fill="var(--primary-net)" stroke="var(--primary-net-dark)" stroke-width="0.5"/>
+        <circle cx="190" cy="272" r="5" fill="var(--primary-net)" stroke="var(--primary-net-dark)" stroke-width="0.5"/>
+        <!-- node body -->
+        <rect x="100" y="280" width="160" height="160" rx="10" fill="var(--node-fill)" stroke="var(--node-stroke)" stroke-width="0.5"/>
+        <text x="180" y="310" text-anchor="middle" font-size="15" font-weight="500" fill="var(--secondary-net-dark)">Node 1</text>
+        <text x="180" y="330" text-anchor="middle" font-size="12" fill="var(--secondary-net-dark)">Dell server</text>
+        <text x="180" y="358" text-anchor="middle" font-size="11" fill="var(--secondary-net-dark)" opacity="0.8">Rubrik CDM</text>
+        <!-- port labels on top -->
+        <text x="175" y="262" text-anchor="middle" font-size="10" fill="var(--primary-net-dark)">Primary (bond0)</text>
+        <!-- port labels on bottom -->
+        <text x="175" y="462" text-anchor="middle" font-size="10" fill="var(--secondary-net-dark)">Secondary (bond1)</text>
+        <!-- secondary port indicators on BOTTOM -->
+        <circle cx="160" cy="448" r="5" fill="var(--secondary-net)" stroke="var(--secondary-net-dark)" stroke-width="0.5"/>
+        <circle cx="190" cy="448" r="5" fill="var(--secondary-net)" stroke="var(--secondary-net-dark)" stroke-width="0.5"/>
+      </g>
+
+      <!-- Node 2 -->
+      <g>
+        <circle cx="370" cy="272" r="5" fill="var(--primary-net)" stroke="var(--primary-net-dark)" stroke-width="0.5"/>
+        <circle cx="400" cy="272" r="5" fill="var(--primary-net)" stroke="var(--primary-net-dark)" stroke-width="0.5"/>
+        <rect x="310" y="280" width="160" height="160" rx="10" fill="var(--node-fill)" stroke="var(--node-stroke)" stroke-width="0.5"/>
+        <text x="390" y="310" text-anchor="middle" font-size="15" font-weight="500" fill="var(--secondary-net-dark)">Node 2</text>
+        <text x="390" y="330" text-anchor="middle" font-size="12" fill="var(--secondary-net-dark)">Dell server</text>
+        <text x="390" y="358" text-anchor="middle" font-size="11" fill="var(--secondary-net-dark)" opacity="0.8">Rubrik CDM</text>
+        <text x="385" y="262" text-anchor="middle" font-size="10" fill="var(--primary-net-dark)">Primary (bond0)</text>
+        <text x="385" y="462" text-anchor="middle" font-size="10" fill="var(--secondary-net-dark)">Secondary (bond1)</text>
+        <circle cx="370" cy="448" r="5" fill="var(--secondary-net)" stroke="var(--secondary-net-dark)" stroke-width="0.5"/>
+        <circle cx="400" cy="448" r="5" fill="var(--secondary-net)" stroke="var(--secondary-net-dark)" stroke-width="0.5"/>
+      </g>
+
+      <!-- Node 3 -->
+      <g>
+        <circle cx="580" cy="272" r="5" fill="var(--primary-net)" stroke="var(--primary-net-dark)" stroke-width="0.5"/>
+        <circle cx="610" cy="272" r="5" fill="var(--primary-net)" stroke="var(--primary-net-dark)" stroke-width="0.5"/>
+        <rect x="520" y="280" width="160" height="160" rx="10" fill="var(--node-fill)" stroke="var(--node-stroke)" stroke-width="0.5"/>
+        <text x="600" y="310" text-anchor="middle" font-size="15" font-weight="500" fill="var(--secondary-net-dark)">Node 3</text>
+        <text x="600" y="330" text-anchor="middle" font-size="12" fill="var(--secondary-net-dark)">Dell server</text>
+        <text x="600" y="358" text-anchor="middle" font-size="11" fill="var(--secondary-net-dark)" opacity="0.8">Rubrik CDM</text>
+        <text x="595" y="262" text-anchor="middle" font-size="10" fill="var(--primary-net-dark)">Primary (bond0)</text>
+        <text x="595" y="462" text-anchor="middle" font-size="10" fill="var(--secondary-net-dark)">Secondary (bond1)</text>
+        <circle cx="580" cy="448" r="5" fill="var(--secondary-net)" stroke="var(--secondary-net-dark)" stroke-width="0.5"/>
+        <circle cx="610" cy="448" r="5" fill="var(--secondary-net)" stroke="var(--secondary-net-dark)" stroke-width="0.5"/>
+      </g>
+
+      <!-- Node 4 -->
+      <g>
+        <circle cx="790" cy="272" r="5" fill="var(--primary-net)" stroke="var(--primary-net-dark)" stroke-width="0.5"/>
+        <circle cx="820" cy="272" r="5" fill="var(--primary-net)" stroke="var(--primary-net-dark)" stroke-width="0.5"/>
+        <rect x="730" y="280" width="160" height="160" rx="10" fill="var(--node-fill)" stroke="var(--node-stroke)" stroke-width="0.5"/>
+        <text x="810" y="310" text-anchor="middle" font-size="15" font-weight="500" fill="var(--secondary-net-dark)">Node 4</text>
+        <text x="810" y="330" text-anchor="middle" font-size="12" fill="var(--secondary-net-dark)">Dell server</text>
+        <text x="810" y="358" text-anchor="middle" font-size="11" fill="var(--secondary-net-dark)" opacity="0.8">Rubrik CDM</text>
+        <text x="805" y="262" text-anchor="middle" font-size="10" fill="var(--primary-net-dark)">Primary (bond0)</text>
+        <text x="805" y="462" text-anchor="middle" font-size="10" fill="var(--secondary-net-dark)">Secondary (bond1)</text>
+        <circle cx="790" cy="448" r="5" fill="var(--secondary-net)" stroke="var(--secondary-net-dark)" stroke-width="0.5"/>
+        <circle cx="820" cy="448" r="5" fill="var(--secondary-net)" stroke="var(--secondary-net-dark)" stroke-width="0.5"/>
+      </g>
+
+      <!-- ============ SECONDARY DOWNLINKS from node bottoms to backup switch ============ -->
+      <!-- Node 1 secondary pair -->
+      <line x1="160" y1="453" x2="160" y2="560" stroke="var(--secondary-net)" stroke-width="1.25"/>
+      <line x1="190" y1="453" x2="190" y2="560" stroke="var(--secondary-net)" stroke-width="1.25"/>
+      <!-- Node 2 secondary pair -->
+      <line x1="370" y1="453" x2="370" y2="560" stroke="var(--secondary-net)" stroke-width="1.25"/>
+      <line x1="400" y1="453" x2="400" y2="560" stroke="var(--secondary-net)" stroke-width="1.25"/>
+      <!-- Node 3 secondary pair -->
+      <line x1="580" y1="453" x2="580" y2="560" stroke="var(--secondary-net)" stroke-width="1.25"/>
+      <line x1="610" y1="453" x2="610" y2="560" stroke="var(--secondary-net)" stroke-width="1.25"/>
+      <!-- Node 4 secondary pair -->
+      <line x1="790" y1="453" x2="790" y2="560" stroke="var(--secondary-net)" stroke-width="1.25"/>
+      <line x1="820" y1="453" x2="820" y2="560" stroke="var(--secondary-net)" stroke-width="1.25"/>
+
+      <!-- Label for secondary downlink band -->
+      <text x="500" y="500" text-anchor="middle" font-size="12" fill="var(--text-secondary)" font-style="italic">Secondary redundant ports (2 per node)  —  bottom side</text>
+
+      <!-- ============ BACKUP SWITCH (non-routable) ============ -->
+      <g>
+        <rect x="80" y="560" width="840" height="64" rx="10" fill="var(--secondary-net-light)" stroke="var(--secondary-net)" stroke-width="0.5"/>
+        <text x="500" y="584" text-anchor="middle" font-size="15" font-weight="500" fill="var(--secondary-net-dark)">Backup switch — non-routable network</text>
+        <text x="500" y="604" text-anchor="middle" font-size="12" fill="var(--secondary-net-dark)">Isolated LAN  ·  static route set at bootstrap  ·  no default gateway</text>
+      </g>
+
+      <!-- ============ PROTECTED HOSTS on isolated LAN ============ -->
+      <line x1="500" y1="624" x2="500" y2="660" stroke="var(--secondary-net)" stroke-width="1.25"/>
+      <g>
+        <rect x="280" y="660" width="440" height="60" rx="10" fill="var(--gray-fill)" stroke="var(--gray-stroke)" stroke-width="0.5"/>
+        <text x="500" y="684" text-anchor="middle" font-size="14" font-weight="500" fill="var(--text-primary)">Protected hosts on isolated LAN</text>
+        <text x="500" y="704" text-anchor="middle" font-size="12" fill="var(--text-secondary)">VMs, physical servers, file shares  —  backup sources and restore targets</text>
+      </g>
+
+      <!-- ============ CALLOUTS (dashed annotations pointing at flows) ============ -->
+      <!-- Management callout pointing at primary uplink -->
+      <g opacity="0.85">
+        <line x1="30" y1="230" x2="140" y2="230" stroke="var(--text-tertiary)" stroke-width="0.5" stroke-dasharray="3 2"/>
+        <text x="30" y="220" font-size="10" fill="var(--text-secondary)">Mgmt to SaaS</text>
+        <text x="30" y="244" font-size="10" fill="var(--text-secondary)">(always active)</text>
+      </g>
+
+      <!-- Idle-data callout pointing at primary uplink -->
+      <g opacity="0.85">
+        <line x1="880" y1="230" x2="970" y2="230" stroke="var(--text-tertiary)" stroke-width="0.5" stroke-dasharray="3 2"/>
+        <text x="970" y="220" font-size="10" fill="var(--text-secondary)" text-anchor="end">Routable data</text>
+        <text x="970" y="244" font-size="10" fill="var(--text-secondary)" text-anchor="end">(idle unless needed)</text>
+      </g>
+
+      <!-- Backup traffic callout pointing at secondary downlink -->
+      <g opacity="0.85">
+        <line x1="30" y1="510" x2="140" y2="510" stroke="var(--text-tertiary)" stroke-width="0.5" stroke-dasharray="3 2"/>
+        <text x="30" y="524" font-size="10" fill="var(--text-secondary)">Backup traffic</text>
+        <text x="30" y="538" font-size="10" fill="var(--text-secondary)">(stays on LAN)</text>
+      </g>
+
+      <!-- Static route callout -->
+      <g opacity="0.85">
+        <line x1="880" y1="510" x2="970" y2="510" stroke="var(--text-tertiary)" stroke-width="0.5" stroke-dasharray="3 2"/>
+        <text x="970" y="524" font-size="10" fill="var(--text-secondary)" text-anchor="end">Static route to</text>
+        <text x="970" y="538" font-size="10" fill="var(--text-secondary)" text-anchor="end">protected-host CIDR</text>
+      </g>
+
+    </svg>
+  </div>
+
+  <div class="legend">
+    <h2>Legend</h2>
+    <div class="legend-row">
+      <div class="legend-swatch">
+        <svg width="44" height="12" viewBox="0 0 44 12"><circle cx="6" cy="6" r="4" fill="var(--primary-net)"/><line x1="12" y1="6" x2="44" y2="6" stroke="var(--primary-net)" stroke-width="1.5"/></svg>
+      </div>
+      <div><strong style="font-weight:500;color:var(--text-primary)">Management traffic</strong> — always flows over primary ports, egresses the core switch to Rubrik Security Cloud at <code style="font-family:'SF Mono',Monaco,monospace;font-size:12px;">bmc.my.rubrik.com</code> on HTTPS TCP/443.</div>
+    </div>
+    <div class="legend-row">
+      <div class="legend-swatch">
+        <svg width="44" height="12" viewBox="0 0 44 12"><line x1="0" y1="6" x2="44" y2="6" stroke="var(--primary-net)" stroke-width="1.5" stroke-dasharray="4 3"/></svg>
+      </div>
+      <div><strong style="font-weight:500;color:var(--text-primary)">Routable data</strong> — also uses the primary ports; remains idle when every backup source and target lives on the isolated LAN. Available on demand for cloud archive, replication, or reaching hosts that aren't on the backup LAN.</div>
+    </div>
+    <div class="legend-row">
+      <div class="legend-swatch">
+        <svg width="44" height="12" viewBox="0 0 44 12"><circle cx="6" cy="6" r="4" fill="var(--secondary-net)"/><line x1="12" y1="6" x2="44" y2="6" stroke="var(--secondary-net)" stroke-width="1.5"/></svg>
+      </div>
+      <div><strong style="font-weight:500;color:var(--text-primary)">Backup traffic</strong> — flows over secondary ports, contained entirely within the non-routable backup LAN. Ingest, restore, and intra-cluster replication all stay local.</div>
+    </div>
+    <div class="legend-row">
+      <div class="legend-swatch">
+        <svg width="44" height="12" viewBox="0 0 44 12"><line x1="0" y1="6" x2="44" y2="6" stroke="var(--text-tertiary)" stroke-width="1" stroke-dasharray="3 2"/></svg>
+      </div>
+      <div><strong style="font-weight:500;color:var(--text-primary)">Static route</strong> — added during cluster bootstrap so each Rubrik node knows to reach the protected-host CIDR via its secondary interface. No default gateway exists on the backup LAN.</div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h2>Deployment notes</h2>
+    <p><strong style="font-weight:500;color:var(--text-primary)">Port layout per node:</strong> 4 NICs total — 2 on the top edge bonded as <code>bond0</code> (Primary: Management + routable Data), 2 on the bottom edge bonded as <code>bond1</code> (Secondary: non-routable backup). Use LACP or active-backup bonding to match your switch configuration on both pairs.</p>
+    <p><strong style="font-weight:500;color:var(--text-primary)">Management is non-negotiable on primary:</strong> Rubrik Security Cloud is SaaS, so the cluster must reach <code>bmc.my.rubrik.com</code> on TCP/443 regardless of where backup data moves. That path lives on <code>bond0</code> via the core switch's default gateway.</p>
+    <p><strong style="font-weight:500;color:var(--text-primary)">Static route at bootstrap:</strong> During initial configuration, add a static route on each node scoped <em>narrowly</em> to the protected-host subnet (e.g. <code>10.50.0.0/24 via bond1</code>). Do not add a default gateway on the backup LAN — that would break the return path for management traffic.</p>
+    <p><strong style="font-weight:500;color:var(--text-primary)">Routable Data interface stays configured:</strong> Assigning the Data VLAN to <code>bond0</code> means you can onboard a protected workload off the backup LAN, add cloud archive, or replicate to another Rubrik cluster without re-cabling or re-bootstrapping. It simply sits idle when traffic has no reason to take that path.</p>
+  </div>
+
+</div>
+</body>
+</html>
